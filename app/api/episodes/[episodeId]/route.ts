@@ -3,12 +3,18 @@ import { readSubtitleFile, getSubtitlePathByEpisodeId } from '@/lib/subtitle-sca
 import { parseASS } from '@/lib/ass-parser';
 import { getEpisodeTranslations } from '@/lib/kv-service';
 
+interface RouteParams {
+  params: Promise<{
+    episodeId: string;
+  }>;
+}
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: { episodeId: string } }
+  context: RouteParams
 ) {
   try {
-    const { episodeId } = params;
+    const { episodeId } = await context.params;
     
     const subtitlePath = await getSubtitlePathByEpisodeId(episodeId);
     

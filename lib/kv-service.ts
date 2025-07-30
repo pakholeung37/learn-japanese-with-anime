@@ -1,10 +1,27 @@
-import { kv } from '@vercel/kv';
 import { Translation, UserProgress } from '@/types/anime';
+
+// 动态导入存储服务
+async function getKVClient() {
+  // 检查是否在生产环境且有KV配置
+  const isProduction = process.env.NODE_ENV === 'production';
+  const hasKVConfig = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN;
+  
+  if (isProduction && hasKVConfig) {
+    // 生产环境使用Vercel KV
+    const { kv } = await import('@vercel/kv');
+    return kv;
+  } else {
+    // 开发环境使用内存存储
+    const { mockKV } = await import('./memory-store');
+    return mockKV;
+  }
+}
 
 /**
  * 保存用户翻译
  */
 export async function saveTranslation(translation: Translation): Promise<void> {
+  const kv = await getKVClient();
   const key = `translation:${translation.episodeId}:${translation.subtitleId}`;
   await kv.set(key, translation);
 }
@@ -13,14 +30,16 @@ export async function saveTranslation(translation: Translation): Promise<void> {
  * 获取用户翻译
  */
 export async function getTranslation(episodeId: string, subtitleId: string): Promise<Translation | null> {
+  const kv = await getKVClient();
   const key = `translation:${episodeId}:${subtitleId}`;
-  return await kv.get(key);
+  return await kv.get(key) as Translation | null;
 }
 
 /**
  * 获取剧集的所有翻译
  */
 export async function getEpisodeTranslations(episodeId: string): Promise<Translation[]> {
+  const kv = await getKVClient();
   const pattern = `translation:${episodeId}:*`;
   const keys = await kv.keys(pattern);
   
@@ -34,6 +53,7 @@ export async function getEpisodeTranslations(episodeId: string): Promise<Transla
  * 删除翻译
  */
 export async function deleteTranslation(episodeId: string, subtitleId: string): Promise<void> {
+  const kv = await getKVClient();
   const key = `translation:${episodeId}:${subtitleId}`;
   await kv.del(key);
 }
@@ -42,6 +62,7 @@ export async function deleteTranslation(episodeId: string, subtitleId: string): 
  * 保存用户学习进度
  */
 export async function saveUserProgress(progress: UserProgress): Promise<void> {
+  const kv = await getKVClient();
   const key = `progress:${progress.userId}:${progress.episodeId}`;
   await kv.set(key, progress);
 }
@@ -50,14 +71,16 @@ export async function saveUserProgress(progress: UserProgress): Promise<void> {
  * 获取用户学习进度
  */
 export async function getUserProgress(userId: string, episodeId: string): Promise<UserProgress | null> {
+  const kv = await getKVClient();
   const key = `progress:${userId}:${episodeId}`;
-  return await kv.get(key);
+  return await kv.get(key) as UserProgress | null;
 }
 
 /**
  * 获取用户所有学习进度
  */
 export async function getAllUserProgress(userId: string): Promise<UserProgress[]> {
+  const kv = await getKVClient();
   const pattern = `progress:${userId}:*`;
   const keys = await kv.keys(pattern);
   
@@ -98,6 +121,7 @@ export async function getStudyStats(userId: string): Promise<{
   completedSubtitles: number;
   totalTranslations: number;
 }> {
+  const kv = await getKVClient();
   const allProgress = await getAllUserProgress(userId);
   const translationKeys = await kv.keys('translation:*');
   
