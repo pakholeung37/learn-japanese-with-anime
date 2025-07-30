@@ -62,7 +62,7 @@ export default function DevTools() {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 bg-gray-900 text-white p-4 rounded-lg shadow-lg text-sm max-w-xs">
+    <div className="fixed bottom-4 right-4 bg-gray-900 dark:bg-gray-800 text-white p-4 rounded-lg shadow-lg border border-gray-700 dark:border-gray-600 text-sm max-w-xs">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center">
           <Database className="w-4 h-4 mr-2" />
@@ -71,7 +71,7 @@ export default function DevTools() {
         <button
           onClick={fetchStats}
           disabled={loading}
-          className="p-1 hover:bg-gray-700 rounded"
+          className="p-1 hover:bg-gray-700 dark:hover:bg-gray-600 rounded"
         >
           <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
         </button>
@@ -79,19 +79,19 @@ export default function DevTools() {
       
       {stats && (
         <div className="space-y-2">
-          <div className="text-xs text-gray-300">
+          <div className="text-xs text-gray-300 dark:text-gray-400">
             存储: {stats.storage} ({stats.environment})
           </div>
           <div className="text-xs">
             翻译: {stats.stats.translationsCount} 条<br />
             进度: {stats.stats.progressCount} 条
           </div>
-          <div className="text-xs text-yellow-400">
+          <div className="text-xs text-yellow-400 dark:text-yellow-300">
             {stats.note}
           </div>
           <button
             onClick={clearData}
-            className="flex items-center text-xs bg-red-600 hover:bg-red-700 px-2 py-1 rounded"
+            className="flex items-center text-xs bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 px-2 py-1 rounded"
           >
             <Trash2 className="w-3 h-3 mr-1" />
             清空数据

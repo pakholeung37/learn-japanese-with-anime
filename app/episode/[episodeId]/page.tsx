@@ -12,8 +12,6 @@ export default async function Episode({ params }: PageProps) {
   return (
     <EpisodePage
       episodeId={episodeId}
-      animeTitle="K-ON!!" // 这里应该从数据库获取
-      episodeNumber={1} // 这里应该从episodeId解析
     />
   );
 }

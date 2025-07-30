@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { readSubtitleFile, getSubtitlePathByEpisodeId } from '@/lib/subtitle-scanner';
-import { parseASS } from '@/lib/ass-parser';
-import { getEpisodeTranslations } from '@/lib/kv-service';
+import { NextRequest, NextResponse } from "next/server";
+import { readSubtitleFile, getEpisodeInfo } from "@/lib/subtitle-scanner";
+import { parseASS } from "@/lib/ass-parser";
+import { getEpisodeTranslations } from "@/lib/kv-service";
 
 interface RouteParams {
   params: Promise<{
@@ -9,36 +9,36 @@ interface RouteParams {
   }>;
 }
 
-export async function GET(
-  request: NextRequest,
-  context: RouteParams
-) {
+export async function GET(request: NextRequest, context: RouteParams) {
   try {
-    const { episodeId } = await context.params;
+    const { episodeId: rawEpisodeId } = await context.params;
     
-    const subtitlePath = await getSubtitlePathByEpisodeId(episodeId);
+    // URL解码
+    const episodeId = decodeURIComponent(rawEpisodeId);
     
-    if (!subtitlePath) {
-      return NextResponse.json(
-        { error: '找不到字幕文件' },
-        { status: 404 }
-      );
+    const episodeInfo = await getEpisodeInfo(episodeId);
+    console.log('episodeId:', rawEpisodeId);
+
+    if (!episodeInfo) {
+      return NextResponse.json({ error: "找不到剧集信息" }, { status: 404 });
     }
-    
-    const content = await readSubtitleFile(subtitlePath);
+
+    const { episode, anime } = episodeInfo;
+    const content = await readSubtitleFile(episode.subtitlePath);
     const parsed = parseASS(content);
     const translations = await getEpisodeTranslations(episodeId);
-    
+
     return NextResponse.json({
-      episode: episodeId,
+      episodeId: episode.id,
+      episodeNumber: episode.number,
+      episodeTitle: episode.title,
+      animeTitle: anime.title,
+      animeId: anime.id,
       subtitles: parsed.dialogues,
-      translations
+      translations,
     });
   } catch (error) {
-    console.error('获取剧集字幕失败:', error);
-    return NextResponse.json(
-      { error: '获取剧集字幕失败' },
-      { status: 500 }
-    );
+    console.error("获取剧集字幕失败:", error);
+    return NextResponse.json({ error: "获取剧集字幕失败" }, { status: 500 });
   }
 }
