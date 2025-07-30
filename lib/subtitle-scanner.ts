@@ -214,7 +214,42 @@ export async function getEpisodeInfo(
  */
 export async function readSubtitleFile(filePath: string): Promise<string> {
   try {
-    return await fs.readFile(filePath, "utf-8");
+    // 首先尝试读取为 Buffer
+    const buffer = await fs.readFile(filePath);
+    
+    // 检查是否是 UTF-16LE (BOM: FF FE)
+    if (buffer.length >= 2 && buffer[0] === 0xFF && buffer[1] === 0xFE) {
+      // UTF-16LE 编码
+      return buffer.toString('utf16le');
+    }
+    
+    // 检查是否是 UTF-16BE (BOM: FE FF)
+    if (buffer.length >= 2 && buffer[0] === 0xFE && buffer[1] === 0xFF) {
+      // UTF-16BE 编码 (需要转换)
+      const utf16beBuffer = Buffer.alloc(buffer.length - 2);
+      for (let i = 2; i < buffer.length; i += 2) {
+        utf16beBuffer[i - 2] = buffer[i + 1];
+        utf16beBuffer[i - 1] = buffer[i];
+      }
+      return utf16beBuffer.toString('utf16le');
+    }
+    
+    // 如果没有 BOM，尝试检测编码
+    // 检查是否包含 UTF-16LE 的特征（每个ASCII字符后跟0x00）
+    let utf16leScore = 0;
+    for (let i = 0; i < Math.min(buffer.length, 1000); i += 2) {
+      if (buffer[i] > 0x00 && buffer[i] < 0x7F && buffer[i + 1] === 0x00) {
+        utf16leScore++;
+      }
+    }
+    
+    // 如果看起来像 UTF-16LE，就用 UTF-16LE 解码
+    if (utf16leScore > 10) {
+      return buffer.toString('utf16le');
+    }
+    
+    // 否则默认使用 UTF-8
+    return buffer.toString('utf-8');
   } catch (error) {
     console.error("读取字幕文件失败:", error);
     return "";
