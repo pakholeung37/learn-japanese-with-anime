@@ -1,65 +1,67 @@
-'use client';
+"use client"
 
-import { useState, useEffect } from 'react';
-import { Database, Trash2, RefreshCw } from 'lucide-react';
+import { useState, useEffect } from "react"
+import { Database, Trash2, RefreshCw } from "lucide-react"
 
 interface DevStats {
-  environment: string;
-  storage: string;
+  environment: string
+  storage: string
   stats: {
-    translationsCount: number;
-    progressCount: number;
-  };
-  note: string;
+    translationsCount: number
+    progressCount: number
+  }
+  note: string
 }
 
 export default function DevTools() {
-  const [stats, setStats] = useState<DevStats | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
+  const [stats, setStats] = useState<DevStats | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [isVisible, setIsVisible] = useState(false)
 
   // 只在开发环境显示
   useEffect(() => {
-    setIsVisible(typeof window !== 'undefined' && process.env.NODE_ENV === 'development');
-  }, []);
+    setIsVisible(
+      typeof window !== "undefined" && process.env.NODE_ENV === "development",
+    )
+  }, [])
 
   const fetchStats = async () => {
-    setLoading(true);
+    setLoading(true)
     try {
-      const response = await fetch('/api/dev');
+      const response = await fetch("/api/dev")
       if (response.ok) {
-        const data = await response.json();
-        setStats(data);
+        const data = await response.json()
+        setStats(data)
       }
     } catch (error) {
-      console.error('获取开发统计失败:', error);
+      console.error("获取开发统计失败:", error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const clearData = async () => {
-    if (!confirm('确定要清空所有内存数据吗？')) return;
-    
+    if (!confirm("确定要清空所有内存数据吗？")) return
+
     try {
-      const response = await fetch('/api/dev', { method: 'DELETE' });
+      const response = await fetch("/api/dev", { method: "DELETE" })
       if (response.ok) {
-        await fetchStats(); // 刷新统计
-        alert('数据已清空');
+        await fetchStats() // 刷新统计
+        alert("数据已清空")
       }
     } catch (error) {
-      console.error('清空数据失败:', error);
-      alert('清空数据失败');
+      console.error("清空数据失败:", error)
+      alert("清空数据失败")
     }
-  };
+  }
 
   useEffect(() => {
     if (isVisible) {
-      fetchStats();
+      fetchStats()
     }
-  }, [isVisible]);
+  }, [isVisible])
 
-  if (!isVisible) return null;
+  if (!isVisible) return null
 
   return (
     <div className="fixed bottom-4 right-4 bg-gray-900 dark:bg-gray-800 text-white p-4 rounded-lg shadow-lg border border-gray-700 dark:border-gray-600 text-sm max-w-xs">
@@ -73,10 +75,10 @@ export default function DevTools() {
           disabled={loading}
           className="p-1 hover:bg-gray-700 dark:hover:bg-gray-600 rounded"
         >
-          <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
         </button>
       </div>
-      
+
       {stats && (
         <div className="space-y-2">
           <div className="text-xs text-gray-300 dark:text-gray-400">
@@ -99,5 +101,5 @@ export default function DevTools() {
         </div>
       )}
     </div>
-  );
+  )
 }

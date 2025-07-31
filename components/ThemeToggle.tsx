@@ -1,8 +1,8 @@
-'use client'
+"use client"
 
-import { useTheme } from 'next-themes'
-import { Sun, Moon, Monitor } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useTheme } from "next-themes"
+import { Sun, Moon, Monitor } from "lucide-react"
+import { useState, useEffect } from "react"
 
 export default function ThemeToggle() {
   const { theme, setTheme } = useTheme()
@@ -18,12 +18,12 @@ export default function ThemeToggle() {
   }
 
   const themes = [
-    { value: 'light', label: '浅色', icon: Sun },
-    { value: 'dark', label: '深色', icon: Moon },
-    { value: 'system', label: '跟随系统', icon: Monitor },
+    { value: "light", label: "浅色", icon: Sun },
+    { value: "dark", label: "深色", icon: Moon },
+    { value: "system", label: "跟随系统", icon: Monitor },
   ] as const
 
-  const currentTheme = themes.find(t => t.value === theme)
+  const currentTheme = themes.find((t) => t.value === theme)
   const CurrentIcon = currentTheme?.icon || Sun
 
   return (
@@ -43,7 +43,7 @@ export default function ThemeToggle() {
             className="fixed inset-0 z-10"
             onClick={() => setIsOpen(false)}
           />
-          
+
           {/* 下拉菜单 */}
           <div className="absolute right-0 top-full mt-2 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-20">
             {themes.map(({ value, label, icon: Icon }) => (
@@ -55,8 +55,8 @@ export default function ThemeToggle() {
                 }}
                 className={`w-full flex items-center px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
                   theme === value
-                    ? 'text-blue-600 dark:text-blue-400'
-                    : 'text-gray-700 dark:text-gray-300'
+                    ? "text-blue-600 dark:text-blue-400"
+                    : "text-gray-700 dark:text-gray-300"
                 }`}
               >
                 <Icon className="w-4 h-4 mr-2" />

@@ -1,11 +1,11 @@
-"use client";
+"use client"
 
-import { useHeader } from './HeaderProvider';
-import ThemeToggle from './ThemeToggle';
-import Link from 'next/link';
+import { useHeader } from "./HeaderProvider"
+import ThemeToggle from "./ThemeToggle"
+import Link from "next/link"
 
 export default function DynamicHeader() {
-  const { headerContent } = useHeader();
+  const { headerContent } = useHeader()
 
   return (
     <header className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
@@ -17,7 +17,10 @@ export default function DynamicHeader() {
           </div>
         ) : (
           <div className="flex justify-between items-center">
-            <Link href="/" className="text-xl font-bold text-gray-900 dark:text-white hover:text-gray-700 dark:hover:text-gray-300">
+            <Link
+              href="/"
+              className="text-xl font-bold text-gray-900 dark:text-white hover:text-gray-700 dark:hover:text-gray-300"
+            >
               通过动画学习日语
             </Link>
             <ThemeToggle />
@@ -25,5 +28,5 @@ export default function DynamicHeader() {
         )}
       </div>
     </header>
-  );
+  )
 }
