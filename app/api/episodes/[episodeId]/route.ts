@@ -17,7 +17,6 @@ export async function GET(request: NextRequest, context: RouteParams) {
     const episodeId = decodeURIComponent(rawEpisodeId)
 
     const episodeInfo = await getEpisodeInfo(episodeId)
-    console.log("episodeId:", rawEpisodeId)
 
     if (!episodeInfo) {
       return NextResponse.json({ error: "找不到剧集信息" }, { status: 404 })
@@ -27,7 +26,9 @@ export async function GET(request: NextRequest, context: RouteParams) {
     const content = await readSubtitleFile(episode.subtitlePath)
     const parsed = parseASS(content)
     const translations = await getEpisodeTranslations(episodeId)
-
+    console.log("Getting translations for episodeId:", episodeId)
+    console.log("Found translations:", translations.length)
+    console.log("translations", translations)
     return NextResponse.json({
       episodeId: episode.id,
       episodeNumber: episode.number,

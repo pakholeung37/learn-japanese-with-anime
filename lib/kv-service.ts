@@ -1,4 +1,9 @@
 import { Translation, UserProgress } from "@/types/anime"
+import { 
+  createTranslationKey, 
+  createTranslationPattern, 
+  normalizeEpisodeId 
+} from "./id-utils"
 
 // 动态导入存储服务
 async function getKVClient() {
@@ -23,7 +28,11 @@ async function getKVClient() {
  */
 export async function saveTranslation(translation: Translation): Promise<void> {
   const kv = await getKVClient()
-  const key = `translation:${translation.episodeId}:${translation.subtitleId}`
+  const key = createTranslationKey(translation.episodeId, translation.subtitleId)
+  console.log("Saving translation with key:", key)
+  console.log("Original episodeId:", translation.episodeId)
+  console.log("Normalized episodeId:", normalizeEpisodeId(translation.episodeId))
+  console.log("Translation data:", translation)
   await kv.set(key, translation)
 }
 
@@ -35,7 +44,7 @@ export async function getTranslation(
   subtitleId: string,
 ): Promise<Translation | null> {
   const kv = await getKVClient()
-  const key = `translation:${episodeId}:${subtitleId}`
+  const key = createTranslationKey(episodeId, subtitleId)
   return (await kv.get(key)) as Translation | null
 }
 
@@ -46,13 +55,19 @@ export async function getEpisodeTranslations(
   episodeId: string,
 ): Promise<Translation[]> {
   const kv = await getKVClient()
-  const pattern = `translation:${episodeId}:*`
+  const pattern = createTranslationPattern(episodeId)
+  console.log("Looking for translations with pattern:", pattern)
+  console.log("Original episodeId:", episodeId)
+  console.log("Normalized episodeId:", normalizeEpisodeId(episodeId))
   const keys = await kv.keys(pattern)
+  console.log("Found keys:", keys)
 
   if (keys.length === 0) return []
 
   const translations = await kv.mget(...keys)
-  return translations.filter(Boolean) as Translation[]
+  const validTranslations = translations.filter(Boolean) as Translation[]
+  console.log("Valid translations found:", validTranslations.length)
+  return validTranslations
 }
 
 /**
@@ -63,7 +78,7 @@ export async function deleteTranslation(
   subtitleId: string,
 ): Promise<void> {
   const kv = await getKVClient()
-  const key = `translation:${episodeId}:${subtitleId}`
+  const key = createTranslationKey(episodeId, subtitleId)
   await kv.del(key)
 }
 

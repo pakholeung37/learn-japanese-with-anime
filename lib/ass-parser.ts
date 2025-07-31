@@ -62,6 +62,25 @@ export function parseASS(content: string): ParsedSubtitle {
 }
 
 /**
+ * 生成稳定的字幕ID
+ * 基于时间和文本内容生成确定性的ID，确保同一字幕始终有相同的ID
+ */
+function generateStableSubtitleId(startTime: string, endTime: string, text: string): string {
+  // 创建一个基于内容的简单哈希
+  const content = `${startTime}-${endTime}-${text}`
+  let hash = 0
+  for (let i = 0; i < content.length; i++) {
+    const char = content.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash // 转换为32位整数
+  }
+  
+  // 转换为正数并生成短字符串
+  const hashStr = Math.abs(hash).toString(36)
+  return `${startTime}-${endTime}-${hashStr}`
+}
+
+/**
  * 解析单行对话
  */
 function parseDialogueLine(line: string): SubtitleLine | null {
@@ -84,7 +103,7 @@ function parseDialogueLine(line: string): SubtitleLine | null {
   if (!cleanText) return null
 
   return {
-    id: `${startTime}-${endTime}-${Math.random().toString(36).substr(2, 9)}`,
+    id: generateStableSubtitleId(startTime, endTime, cleanText),
     startTime,
     endTime,
     text: cleanText,

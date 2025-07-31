@@ -32,6 +32,7 @@ export default function DevTools() {
       if (response.ok) {
         const data = await response.json()
         setStats(data)
+        console.log("开发统计信息:", data)
       }
     } catch (error) {
       console.error("获取开发统计失败:", error)
