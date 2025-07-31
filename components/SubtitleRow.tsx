@@ -26,75 +26,68 @@ export default function SubtitleRow({
     translation?.translatedText || "",
   )
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
-  const debounceRef = useRef<NodeJS.Timeout | null>(null)
-  const previousValueRef = useRef<string>(translation?.translatedText || "")
+  const lastSavedValueRef = useRef<string>(translation?.translatedText || "")
 
+  // 只在初始化时或翻译从外部更新时设置文本
   useEffect(() => {
-    setTranslatedText(translation?.translatedText || "")
-    previousValueRef.current = translation?.translatedText || ""
+    const newTranslationText = translation?.translatedText || ""
+    setTranslatedText(newTranslationText)
+    lastSavedValueRef.current = newTranslationText
   }, [translation])
 
-  // Debounced save function
-  const debouncedSave = useCallback(
-    async (value: string) => {
-      // Skip if value hasn't changed or is the same as previous saved value
-      if (value === previousValueRef.current) {
-        return
-      }
-
-      // Clear any existing debounce
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current)
-      }
-
-      // If empty, delete the translation
-      if (!value.trim() && translation) {
-        setSaveStatus('saving')
-        try {
-          await onDelete(subtitle.id)
-          previousValueRef.current = ""
-          setSaveStatus('saved')
-          setTimeout(() => setSaveStatus('idle'), 2000)
-        } catch (error) {
-          console.error("删除翻译失败:", error)
-          setSaveStatus('error')
-          setTimeout(() => setSaveStatus('idle'), 2000)
-        }
-        return
-      }
-
-      // If has content, save it
-      if (value.trim()) {
-        debounceRef.current = setTimeout(async () => {
-          setSaveStatus('saving')
-          try {
-            await onSave(subtitle.id, value.trim())
-            previousValueRef.current = value.trim()
-            setSaveStatus('saved')
-            setTimeout(() => setSaveStatus('idle'), 2000)
-          } catch (error) {
-            console.error("保存翻译失败:", error)
-            setSaveStatus('error')
-            setTimeout(() => setSaveStatus('idle'), 2000)
-          }
-        }, 1000) // 1 second debounce
-      }
-    },
-    [subtitle.id, translation, onSave, onDelete]
-  )
-
+  // 处理文本变化
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value
     setTranslatedText(value)
-    debouncedSave(value)
   }
 
-  // Cleanup debounce on unmount
+  // 处理失焦时保存
+  const handleBlur = async () => {
+    const value = translatedText.trim()
+    
+    // 如果内容没有变化，不需要保存
+    if (value === lastSavedValueRef.current) {
+      return
+    }
+
+    setSaveStatus('saving')
+
+    try {
+      // 如果内容为空且之前有翻译，删除翻译
+      if (!value && translation) {
+        await onDelete(subtitle.id)
+        lastSavedValueRef.current = ""
+        setSaveStatus('saved')
+      }
+      // 如果有内容，保存翻译
+      else if (value) {
+        await onSave(subtitle.id, value)
+        lastSavedValueRef.current = value
+        setSaveStatus('saved')
+      }
+      
+      // 2秒后隐藏保存状态
+      setTimeout(() => setSaveStatus('idle'), 2000)
+    } catch (error) {
+      console.error("保存翻译失败:", error)
+      setSaveStatus('error')
+      setTimeout(() => setSaveStatus('idle'), 2000)
+    }
+  }
+
+  // 处理键盘快捷键（保留 Ctrl+S 立即保存功能）
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Ctrl+S 或 Cmd+S 立即保存
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault()
+      handleBlur() // 复用失焦保存逻辑
+    }
+  }
+
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current)
-      }
+      // 清理函数可以为空，因为我们不再使用 debounce
     }
   }, [])
 
@@ -162,6 +155,8 @@ export default function SubtitleRow({
         <textarea
           value={translatedText}
           onChange={handleTextChange}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
           placeholder="输入您的翻译..."
           className={`w-full p-3 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none placeholder-gray-500 dark:placeholder-gray-400 transition-colors ${
             translatedText
@@ -171,7 +166,7 @@ export default function SubtitleRow({
           rows={1}
         />
         <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          {translatedText ? "内容会自动保存" : "输入翻译内容，将自动保存"}
+          {translatedText ? "点击其他地方或按 Ctrl+S 保存" : "输入翻译内容，失焦时自动保存"}
         </div>
       </div>
     </div>
