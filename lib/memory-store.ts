@@ -31,12 +31,12 @@ class MemoryStore {
     this.translations.delete(key)
   }
 
-  getTranslationKeys(pattern: string): string[] {
+  getTranslationKeys(_pattern: string): string[] {
     const keys: string[] = []
-    const regex = new RegExp(pattern.replace("*", ".*"))
+    const pattern = _pattern.replace("*", "")
 
     for (const key of this.translations.keys()) {
-      if (regex.test(key)) {
+      if (key.startsWith(pattern)) {
         keys.push(key)
       }
     }
@@ -86,10 +86,17 @@ class MemoryStore {
   }
 
   // 获取统计信息
-  getStats(): { translationsCount: number; progressCount: number } {
+  getStats(): {
+    translationsCount: number
+    progressCount: number
+    translations: Translation[]
+    progress: UserProgress[]
+  } {
     return {
       translationsCount: this.translations.size,
+      translations: Array.from(this.translations.values()),
       progressCount: this.userProgress.size,
+      progress: Array.from(this.userProgress.values()),
     }
   }
 }
