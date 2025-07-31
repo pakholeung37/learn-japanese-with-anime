@@ -295,7 +295,6 @@ export default function EpisodePage({
   const stats = getStats()
   const progress =
     stats.total > 0 ? ((stats.completed / stats.total) * 100).toFixed(1) : "0"
-
   return (
     <div className="min-h-screen">
       {/* 过滤器 */}
@@ -332,13 +331,13 @@ export default function EpisodePage({
           </div>
         ) : (
           <div className="space-y-1">
-            {filteredSubtitles.map((subtitle) => {
+            {filteredSubtitles.map((subtitle, i) => {
               const translation = data?.translations.find(
                 (t) => t.subtitleId === subtitle.id,
               )
               return (
                 <SubtitleRow
-                  key={subtitle.id}
+                  key={subtitle.id + '-' + i}
                   subtitle={subtitle}
                   translation={translation}
                   episodeId={episodeId}
