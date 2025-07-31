@@ -1,48 +1,52 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { AnimeInfo } from "@/types/anime";
-import { Play, BookOpen, Clock } from "lucide-react";
-import Link from "next/link";
+import { useState, useEffect } from "react"
+import { AnimeInfo } from "@/types/anime"
+import { Play, BookOpen, Clock } from "lucide-react"
+import Link from "next/link"
 
 export default function AnimeList() {
-  const [animeList, setAnimeList] = useState<AnimeInfo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [animeList, setAnimeList] = useState<AnimeInfo[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchAnimeList();
-  }, []);
+    fetchAnimeList()
+  }, [])
 
   const fetchAnimeList = async () => {
     try {
-      setLoading(true);
-      const response = await fetch("/api/anime");
+      setLoading(true)
+      const response = await fetch("/api/anime")
       if (!response.ok) {
-        throw new Error("获取动画列表失败");
+        throw new Error("获取动画列表失败")
       }
-      const data = await response.json();
-      setAnimeList(data);
+      const data = await response.json()
+      setAnimeList(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "未知错误");
+      setError(err instanceof Error ? err.message : "未知错误")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg text-gray-600 dark:text-gray-400">加载中...</div>
+        <div className="text-lg text-gray-600 dark:text-gray-400">
+          加载中...
+        </div>
       </div>
-    );
+    )
   }
 
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="text-lg text-red-600 dark:text-red-400 mb-4">{error}</div>
+          <div className="text-lg text-red-600 dark:text-red-400 mb-4">
+            {error}
+          </div>
           <button
             onClick={fetchAnimeList}
             className="px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-600"
@@ -51,7 +55,7 @@ export default function AnimeList() {
           </button>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -64,7 +68,9 @@ export default function AnimeList() {
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
               暂无动画资源
             </h3>
-            <p className="text-gray-600 dark:text-gray-400">请在 app/res 目录下添加ASS字幕文件</p>
+            <p className="text-gray-600 dark:text-gray-400">
+              请在 app/res 目录下添加ASS字幕文件
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -75,11 +81,11 @@ export default function AnimeList() {
         )}
       </div>
     </div>
-  );
+  )
 }
 
 interface AnimeCardProps {
-  anime: AnimeInfo;
+  anime: AnimeInfo
 }
 
 function AnimeCard({ anime }: AnimeCardProps) {
@@ -95,7 +101,9 @@ function AnimeCard({ anime }: AnimeCardProps) {
         </div>
 
         <div className="space-y-2 mb-4">
-          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">剧集列表：</h4>
+          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            剧集列表：
+          </h4>
           <div className="max-h-32 overflow-y-auto">
             {anime.episodes.map((episode) => (
               <Link
@@ -118,5 +126,5 @@ function AnimeCard({ anime }: AnimeCardProps) {
         </Link> */}
       </div>
     </div>
-  );
+  )
 }

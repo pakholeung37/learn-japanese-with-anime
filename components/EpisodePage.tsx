@@ -1,27 +1,27 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { SubtitleLine } from "@/lib/ass-parser";
-import { Translation } from "@/types/anime";
-import SubtitleRow from "@/components/SubtitleRow";
-import { ArrowLeft, Play, Pause, RotateCcw } from "lucide-react";
-import Link from "next/link";
-import { useHeader } from "./HeaderProvider";
+import { useState, useEffect } from "react"
+import { SubtitleLine } from "@/lib/ass-parser"
+import { Translation } from "@/types/anime"
+import SubtitleRow from "@/components/SubtitleRow"
+import { ArrowLeft, Play, Pause, RotateCcw } from "lucide-react"
+import Link from "next/link"
+import { useHeader } from "./HeaderProvider"
 
 interface EpisodePageProps {
-  episodeId: string;
-  animeTitle?: string;
-  episodeNumber?: number;
+  episodeId: string
+  animeTitle?: string
+  episodeNumber?: number
 }
 
 interface EpisodeData {
-  episodeId: string;
-  episodeNumber: number;
-  episodeTitle?: string;
-  animeTitle: string;
-  animeId: string;
-  subtitles: SubtitleLine[];
-  translations: Translation[];
+  episodeId: string
+  episodeNumber: number
+  episodeTitle?: string
+  animeTitle: string
+  animeId: string
+  subtitles: SubtitleLine[]
+  translations: Translation[]
 }
 
 export default function EpisodePage({
@@ -29,18 +29,18 @@ export default function EpisodePage({
   animeTitle: propAnimeTitle,
   episodeNumber: propEpisodeNumber,
 }: EpisodePageProps) {
-  const [data, setData] = useState<EpisodeData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<EpisodeData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<"all" | "completed" | "incomplete">(
-    "all"
-  );
-  const [currentPosition, setCurrentPosition] = useState(0);
-  const { setHeaderContent } = useHeader();
+    "all",
+  )
+  const [currentPosition, setCurrentPosition] = useState(0)
+  const { setHeaderContent } = useHeader()
 
   useEffect(() => {
-    fetchEpisodeData();
-  }, [episodeId]);
+    fetchEpisodeData()
+  }, [episodeId])
 
   useEffect(() => {
     if (loading) {
@@ -56,9 +56,9 @@ export default function EpisodePage({
           <div className="text-lg font-semibold text-gray-900 dark:text-white">
             加载中...
           </div>
-        </div>
-      );
-      return;
+        </div>,
+      )
+      return
     }
 
     if (error) {
@@ -74,14 +74,14 @@ export default function EpisodePage({
           <div className="text-lg font-semibold text-red-600 dark:text-red-400">
             加载失败
           </div>
-        </div>
-      );
-      return;
+        </div>,
+      )
+      return
     }
 
-    const stats = getStats();
+    const stats = getStats()
     const progress =
-      stats.total > 0 ? ((stats.completed / stats.total) * 100).toFixed(1) : "0";
+      stats.total > 0 ? ((stats.completed / stats.total) * 100).toFixed(1) : "0"
 
     setHeaderContent(
       <div className="flex items-center justify-between w-full">
@@ -117,40 +117,47 @@ export default function EpisodePage({
             </div>
           </div>
         </div> */}
-      </div>
-    );
+      </div>,
+    )
 
     // 清理函数，在组件卸载时重置 header
     return () => {
-      setHeaderContent(null);
-    };
-  }, [data, loading, error, setHeaderContent, propAnimeTitle, propEpisodeNumber]);
+      setHeaderContent(null)
+    }
+  }, [
+    data,
+    loading,
+    error,
+    setHeaderContent,
+    propAnimeTitle,
+    propEpisodeNumber,
+  ])
 
   const fetchEpisodeData = async () => {
     try {
-      setLoading(true);
-      const response = await fetch(`/api/episodes/${episodeId}`);
+      setLoading(true)
+      const response = await fetch(`/api/episodes/${episodeId}`)
       if (!response.ok) {
-        throw new Error("获取剧集数据失败");
+        throw new Error("获取剧集数据失败")
       }
-      const episodeData = await response.json();
-      setData(episodeData);
+      const episodeData = await response.json()
+      setData(episodeData)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "未知错误");
+      setError(err instanceof Error ? err.message : "未知错误")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleSaveTranslation = async (
     subtitleId: string,
-    translatedText: string
+    translatedText: string,
   ) => {
-    if (!data) return;
+    if (!data) return
 
     try {
-      const subtitle = data.subtitles.find((s) => s.id === subtitleId);
-      if (!subtitle) return;
+      const subtitle = data.subtitles.find((s) => s.id === subtitleId)
+      if (!subtitle) return
 
       const response = await fetch("/api/translations", {
         method: "POST",
@@ -163,39 +170,39 @@ export default function EpisodePage({
           originalText: subtitle.text,
           translatedText,
         }),
-      });
+      })
 
       if (!response.ok) {
-        throw new Error("保存翻译失败");
+        throw new Error("保存翻译失败")
       }
 
-      const result = await response.json();
+      const result = await response.json()
 
       // 更新本地状态
       setData((prev) => {
-        if (!prev) return prev;
+        if (!prev) return prev
 
         const existingIndex = prev.translations.findIndex(
-          (t) => t.subtitleId === subtitleId
-        );
-        const newTranslations = [...prev.translations];
+          (t) => t.subtitleId === subtitleId,
+        )
+        const newTranslations = [...prev.translations]
 
         if (existingIndex >= 0) {
-          newTranslations[existingIndex] = result.translation;
+          newTranslations[existingIndex] = result.translation
         } else {
-          newTranslations.push(result.translation);
+          newTranslations.push(result.translation)
         }
 
         return {
           ...prev,
           translations: newTranslations,
-        };
-      });
+        }
+      })
     } catch (error) {
-      console.error("保存翻译失败:", error);
-      throw error;
+      console.error("保存翻译失败:", error)
+      throw error
     }
-  };
+  }
 
   const handleDeleteTranslation = async (subtitleId: string) => {
     try {
@@ -208,67 +215,71 @@ export default function EpisodePage({
           episodeId,
           subtitleId,
         }),
-      });
+      })
 
       if (!response.ok) {
-        throw new Error("删除翻译失败");
+        throw new Error("删除翻译失败")
       }
 
       // 更新本地状态
       setData((prev) => {
-        if (!prev) return prev;
+        if (!prev) return prev
 
         return {
           ...prev,
           translations: prev.translations.filter(
-            (t) => t.subtitleId !== subtitleId
+            (t) => t.subtitleId !== subtitleId,
           ),
-        };
-      });
+        }
+      })
     } catch (error) {
-      console.error("删除翻译失败:", error);
-      throw error;
+      console.error("删除翻译失败:", error)
+      throw error
     }
-  };
+  }
 
   const getFilteredSubtitles = () => {
-    if (!data) return [];
+    if (!data) return []
 
-    const { subtitles, translations } = data;
-    const translationMap = new Map(translations.map((t) => [t.subtitleId, t]));
+    const { subtitles, translations } = data
+    const translationMap = new Map(translations.map((t) => [t.subtitleId, t]))
 
     switch (filter) {
       case "completed":
-        return subtitles.filter((s) => translationMap.has(s.id));
+        return subtitles.filter((s) => translationMap.has(s.id))
       case "incomplete":
-        return subtitles.filter((s) => !translationMap.has(s.id));
+        return subtitles.filter((s) => !translationMap.has(s.id))
       default:
-        return subtitles;
+        return subtitles
     }
-  };
+  }
 
   const getStats = () => {
-    if (!data) return { total: 0, completed: 0 };
+    if (!data) return { total: 0, completed: 0 }
 
-    const total = data.subtitles.length;
-    const completed = data.translations.length;
+    const total = data.subtitles.length
+    const completed = data.translations.length
 
-    return { total, completed };
-  };
+    return { total, completed }
+  }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg text-gray-600 dark:text-gray-400">加载中...</div>
+        <div className="text-lg text-gray-600 dark:text-gray-400">
+          加载中...
+        </div>
       </div>
-    );
+    )
   }
 
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="text-lg text-red-600 dark:text-red-400 mb-4">{error}</div>
+          <div className="text-lg text-red-600 dark:text-red-400 mb-4">
+            {error}
+          </div>
           <button
             onClick={fetchEpisodeData}
             className="px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-600"
@@ -277,13 +288,13 @@ export default function EpisodePage({
           </button>
         </div>
       </div>
-    );
+    )
   }
 
-  const filteredSubtitles = getFilteredSubtitles();
-  const stats = getStats();
+  const filteredSubtitles = getFilteredSubtitles()
+  const stats = getStats()
   const progress =
-    stats.total > 0 ? ((stats.completed / stats.total) * 100).toFixed(1) : "0";
+    stats.total > 0 ? ((stats.completed / stats.total) * 100).toFixed(1) : "0"
 
   return (
     <div className="min-h-screen">
@@ -323,8 +334,8 @@ export default function EpisodePage({
           <div className="space-y-1">
             {filteredSubtitles.map((subtitle) => {
               const translation = data?.translations.find(
-                (t) => t.subtitleId === subtitle.id
-              );
+                (t) => t.subtitleId === subtitle.id,
+              )
               return (
                 <SubtitleRow
                   key={subtitle.id}
@@ -334,11 +345,11 @@ export default function EpisodePage({
                   onSave={handleSaveTranslation}
                   onDelete={handleDeleteTranslation}
                 />
-              );
+              )
             })}
           </div>
         )}
       </div>
     </div>
-  );
+  )
 }
