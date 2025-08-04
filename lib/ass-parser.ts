@@ -97,10 +97,20 @@ function parseDialogueLine(line: string): SubtitleLine | null {
   // 文本部分可能包含逗号，所以需要特殊处理
   const text = parts.slice(9).join(",").trim()
 
+  // 过滤歌词行：检查style是否为歌词相关
+  if (isLyricsStyle(style)) {
+    return null
+  }
+
   // 清理文本中的ASS格式标签
   const cleanText = cleanAssText(text)
 
   if (!cleanText) return null
+
+  // 额外检查：如果文本内容看起来像歌词，也过滤掉
+  if (isLyricsContent(cleanText, startTime)) {
+    return null
+  }
 
   return {
     id: generateStableSubtitleId(startTime, endTime, cleanText),
@@ -110,6 +120,65 @@ function parseDialogueLine(line: string): SubtitleLine | null {
     style,
     actor,
   }
+}
+
+/**
+ * 判断style是否为歌词相关
+ */
+function isLyricsStyle(style: string): boolean {
+  const lyricsStyles = [
+    'OPJ',     // 片头曲日文
+    'OPC',     // 片头曲中文
+    'EDJ',     // 片尾曲日文
+    'EDJ2',    // 片尾曲日文2
+    'EDC',     // 片尾曲中文
+    'OP',      // 片头曲
+    'ED',      // 片尾曲
+    'SONG',    // 歌曲
+    'MUSIC',   // 音乐
+    'LYRIC',   // 歌词
+    'LYRICS',  // 歌词
+  ]
+  
+  // 检查完全匹配
+  if (lyricsStyles.includes(style.toUpperCase())) {
+    return true
+  }
+  
+  // 检查包含关系（不区分大小写）
+  const upperStyle = style.toUpperCase()
+  return lyricsStyles.some(lyricStyle => 
+    upperStyle.includes(lyricStyle) || lyricStyle.includes(upperStyle)
+  )
+}
+
+/**
+ * 判断文本内容是否像歌词
+ */
+function isLyricsContent(text: string, startTime: string): boolean {
+  // 转换时间为秒数
+  const timeInSeconds = timeToSeconds(startTime)
+  
+  // OP时间段 (通常在开头1-3分钟)
+  const isInOPTime = timeInSeconds >= 30 && timeInSeconds <= 180
+  
+  // ED时间段 (通常在结尾，假设节目长度20-25分钟)
+  const isInEDTime = timeInSeconds >= 1200 // 20分钟后
+  
+  // 如果在OP/ED时间段内，检查文本特征
+  if (isInOPTime || isInEDTime) {
+    // 歌词特征检查
+    const lyricsPatterns = [
+      /^[A-Za-z\s]+$/, // 纯英文（很多日本动画OP/ED有英文歌词）
+      /[♪♫♬♩]/, // 音符符号
+      /^\s*[A-Z][a-z\s]*$/, // 首字母大写的英文短语
+      /\b(la\s+la|na\s+na|oh\s+oh|yeah|wow)\b/i, // 常见的歌词感叹词
+    ]
+    
+    return lyricsPatterns.some(pattern => pattern.test(text))
+  }
+  
+  return false
 }
 
 /**

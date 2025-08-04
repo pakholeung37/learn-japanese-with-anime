@@ -1,6 +1,6 @@
 "use client"
 
-import { useTheme } from "next-themes"
+import { useTheme } from "./ThemeProvider"
 import { Sun, Moon, Monitor } from "lucide-react"
 import { useState, useEffect } from "react"
 
@@ -18,10 +18,10 @@ export default function ThemeToggle() {
   }
 
   const themes = [
-    { value: "light", label: "浅色", icon: Sun },
-    { value: "dark", label: "深色", icon: Moon },
-    { value: "system", label: "跟随系统", icon: Monitor },
-  ] as const
+    { value: "light" as const, label: "浅色", icon: Sun },
+    { value: "dark" as const, label: "深色", icon: Moon },
+    { value: "system" as const, label: "跟随系统", icon: Monitor },
+  ]
 
   const currentTheme = themes.find((t) => t.value === theme)
   const CurrentIcon = currentTheme?.icon || Sun
