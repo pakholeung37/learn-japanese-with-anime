@@ -1,14 +1,15 @@
 import { Translation, UserProgress } from "@/types/anime"
-import { 
-  createTranslationKey, 
-  createTranslationPattern, 
-  normalizeEpisodeId 
+import {
+  createTranslationKey,
+  createTranslationPattern,
+  normalizeEpisodeId,
 } from "./id-utils"
 
 // 动态导入存储服务
 async function getKVClient() {
   // 检查是否在生产环境且有KV配置
-  const isProduction = process.env.NODE_ENV === "production"
+  const isProduction =
+    process.env.MODE === "production" || process.env.NODE_ENV === "production"
   const hasKVConfig =
     process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN
 
@@ -28,10 +29,16 @@ async function getKVClient() {
  */
 export async function saveTranslation(translation: Translation): Promise<void> {
   const kv = await getKVClient()
-  const key = createTranslationKey(translation.episodeId, translation.subtitleId)
+  const key = createTranslationKey(
+    translation.episodeId,
+    translation.subtitleId,
+  )
   console.log("Saving translation with key:", key)
   console.log("Original episodeId:", translation.episodeId)
-  console.log("Normalized episodeId:", normalizeEpisodeId(translation.episodeId))
+  console.log(
+    "Normalized episodeId:",
+    normalizeEpisodeId(translation.episodeId),
+  )
   console.log("Translation data:", translation)
   await kv.set(key, translation)
 }
