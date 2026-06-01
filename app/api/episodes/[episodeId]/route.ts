@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { readSubtitleFile, getEpisodeInfo } from "@/lib/subtitle-scanner"
 import { parseASS } from "@/lib/ass-parser"
 import { getEpisodeTranslations } from "@/lib/kv-service"
+import { parseToFurigana } from "@/lib/furigana"
 
 interface RouteParams {
   params: Promise<{
@@ -29,13 +30,22 @@ export async function GET(request: NextRequest, context: RouteParams) {
     console.log("Getting translations for episodeId:", episodeId)
     console.log("Found translations:", translations.length)
     console.log("translations", translations)
+
+    // Parse subtitle dialogues to add Furigana tokens
+    const subtitles = await Promise.all(
+      parsed.dialogues.map(async (line) => ({
+        ...line,
+        furigana: await parseToFurigana(line.text),
+      }))
+    )
+
     return NextResponse.json({
       episodeId: episode.id,
       episodeNumber: episode.number,
       episodeTitle: episode.title,
       animeTitle: anime.title,
       animeId: anime.id,
-      subtitles: parsed.dialogues,
+      subtitles,
       translations,
     })
   } catch (error) {

@@ -37,6 +37,27 @@ export default function EpisodePage({
   const [viewMode, setViewMode] = useState<"focus" | "list">("focus")
   const [activeIndex, setActiveIndex] = useState(0)
 
+  // 振假名注音状态 (always / hover / hide)
+  const [furiganaMode, setFuriganaMode] = useState<"always" | "hover" | "hide">("hover")
+
+  // 从 localStorage 加载注音设置
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("furiganaMode")
+      if (saved === "always" || saved === "hover" || saved === "hide") {
+        setFuriganaMode(saved)
+      }
+    }
+  }, [])
+
+  // 保存注音设置到 localStorage
+  const handleFuriganaModeChange = (mode: "always" | "hover" | "hide") => {
+    setFuriganaMode(mode)
+    if (typeof window !== "undefined") {
+      localStorage.setItem("furiganaMode", mode)
+    }
+  }
+
   const { setHeaderContent } = useHeader()
   const focusContainerRef = useRef<HTMLDivElement>(null)
   const initialLoadedRef = useRef(false)
@@ -268,28 +289,71 @@ export default function EpisodePage({
           </div>
         </div>
 
-        {/* 右侧：模式选择按钮 */}
-        <div className="flex items-center bg-gray-150 dark:bg-gray-800/80 p-0.5 rounded-lg border border-gray-200/50 dark:border-gray-750 shadow-inner h-9">
-          <button
-            onClick={() => setViewMode("focus")}
-            className={`flex items-center justify-center px-3 h-full rounded-md text-xs font-semibold transition-all cursor-pointer ${
-              viewMode === "focus"
-                ? "bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
-                : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-            }`}
-          >
-            沉浸聚焦
-          </button>
-          <button
-            onClick={() => setViewMode("list")}
-            className={`flex items-center justify-center px-3 h-full rounded-md text-xs font-semibold transition-all cursor-pointer ${
-              viewMode === "list"
-                ? "bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
-                : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-            }`}
-          >
-            经典列表
-          </button>
+        {/* 右侧：注音设置与模式选择按钮 */}
+        <div className="flex items-center gap-3">
+          {/* 振假名注音设置 */}
+          <div className="flex items-center bg-gray-155 dark:bg-gray-800/80 p-0.5 rounded-lg border border-gray-200/50 dark:border-gray-750 shadow-inner h-9">
+            <span className="px-2 text-[10px] font-bold text-gray-400 dark:text-gray-500 select-none border-r border-gray-200 dark:border-gray-700/50 mr-0.5">
+              注音
+            </span>
+            <button
+              onClick={() => handleFuriganaModeChange("always")}
+              className={`flex items-center justify-center px-2.5 h-full rounded-md text-[10px] sm:text-xs font-semibold transition-all cursor-pointer ${
+                furiganaMode === "always"
+                  ? "bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+              }`}
+              title="总是显示平假名注音"
+            >
+              常显
+            </button>
+            <button
+              onClick={() => handleFuriganaModeChange("hover")}
+              className={`flex items-center justify-center px-2.5 h-full rounded-md text-[10px] sm:text-xs font-semibold transition-all cursor-pointer ${
+                furiganaMode === "hover"
+                  ? "bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+              }`}
+              title="悬浮显注音（暗记测试）"
+            >
+              悬浮
+            </button>
+            <button
+              onClick={() => handleFuriganaModeChange("hide")}
+              className={`flex items-center justify-center px-2.5 h-full rounded-md text-[10px] sm:text-xs font-semibold transition-all cursor-pointer ${
+                furiganaMode === "hide"
+                  ? "bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+              }`}
+              title="隐藏假名注音"
+            >
+              隐藏
+            </button>
+          </div>
+
+          {/* 模式选择按钮 */}
+          <div className="flex items-center bg-gray-155 dark:bg-gray-800/80 p-0.5 rounded-lg border border-gray-200/50 dark:border-gray-750 shadow-inner h-9">
+            <button
+              onClick={() => setViewMode("focus")}
+              className={`flex items-center justify-center px-3 h-full rounded-md text-[10px] sm:text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === "focus"
+                  ? "bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+              }`}
+            >
+              沉浸聚焦
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`flex items-center justify-center px-3 h-full rounded-md text-[10px] sm:text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === "list"
+                  ? "bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+              }`}
+            >
+              经典列表
+            </button>
+          </div>
         </div>
       </div>,
     )
@@ -305,6 +369,7 @@ export default function EpisodePage({
     propAnimeTitle,
     propEpisodeNumber,
     viewMode,
+    furiganaMode,
   ])
 
   const fetchEpisodeData = async () => {
@@ -527,6 +592,7 @@ export default function EpisodePage({
                       viewMode="focus"
                       isActive={isActive}
                       onFocusSelf={() => setActiveIndex(idx)}
+                      furiganaMode={furiganaMode}
                     />
                   </div>
                 )
@@ -554,6 +620,7 @@ export default function EpisodePage({
                     setActiveIndex(idx)
                     setViewMode("focus")
                   }}
+                  furiganaMode={furiganaMode}
                 />
               )
             })}

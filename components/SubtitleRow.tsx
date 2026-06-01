@@ -15,6 +15,7 @@ interface SubtitleRowProps {
   viewMode?: "list" | "focus"
   isActive?: boolean
   onFocusSelf?: () => void
+  furiganaMode?: "always" | "hover" | "hide"
 }
 
 type SaveStatus = "idle" | "saving" | "saved" | "error"
@@ -28,6 +29,7 @@ export default function SubtitleRow({
   viewMode = "list",
   isActive = false,
   onFocusSelf,
+  furiganaMode = "hover",
 }: SubtitleRowProps) {
   const [translatedText, setTranslatedText] = useState(
     translation?.translatedText || "",
@@ -160,6 +162,28 @@ export default function SubtitleRow({
     }
   }, [saveStatus])
 
+  const renderJapaneseText = () => {
+    if (!subtitle.furigana || subtitle.furigana.length === 0) {
+      return subtitle.text
+    }
+
+    return (
+      <span className={`furigana-${furiganaMode}`}>
+        {subtitle.furigana.map((token, index) => {
+          if (token.isKanji && token.reading) {
+            return (
+              <ruby key={index}>
+                {token.text}
+                <rt>{token.reading}</rt>
+              </ruby>
+            )
+          }
+          return <span key={index}>{token.text}</span>
+        })}
+      </span>
+    )
+  }
+
   // --- 渲染逻辑 ---
 
   // 1. 聚焦模式下的非活动状态（上下文背景行）
@@ -195,8 +219,8 @@ export default function SubtitleRow({
 
         {/* 日语原文区 - 极致大号明朝体 */}
         <div className="mb-10 text-center w-full">
-          <div className="japanese-text text-3xl md:text-5xl font-medium text-gray-900 dark:text-white leading-relaxed tracking-wider select-all cursor-text py-2">
-            {subtitle.text}
+          <div className="japanese-text text-3xl md:text-5xl font-medium text-gray-900 dark:text-white leading-relaxed tracking-wider cursor-text py-2">
+            {renderJapaneseText()}
           </div>
         </div>
 
@@ -259,7 +283,7 @@ export default function SubtitleRow({
       {/* 原文 */}
       <div className="mb-3">
         <div className="japanese-text text-lg font-medium text-gray-900 dark:text-white leading-relaxed select-text cursor-text">
-          {subtitle.text}
+          {renderJapaneseText()}
         </div>
       </div>
 

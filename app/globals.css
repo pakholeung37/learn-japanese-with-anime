@@ -127,4 +127,59 @@ body {
   scrollbar-width: none;  /* Firefox */
 }
 
+/* 日语平假名注音 (Furigana) 样式 */
+ruby {
+  ruby-position: over;
+  -webkit-ruby-position: before;
+}
+
+rt {
+  font-size: 0.52em;
+  color: var(--color-indigo-500, #6366f1);
+  opacity: 0.9;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
+  letter-spacing: 0;
+  padding-bottom: 0.1em;
+}
+
+.dark rt {
+  color: var(--color-indigo-300, #a5b4fc);
+  opacity: 0.85;
+}
+
+/* 1. 悬浮显注音模式 (暗记/Zen模式下非常实用) */
+.furigana-hover rt {
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.furigana-hover:hover rt,
+ruby:hover rt {
+  opacity: 0.9;
+  transform: translateY(0);
+}
+
+.dark .furigana-hover:hover rt,
+.dark ruby:hover rt {
+  opacity: 0.85;
+}
+
+/* 2. 隐藏注音模式 */
+.furigana-hide rt {
+  display: none !important;
+}
+
+/* 3. 常显模式 */
+.furigana-always rt {
+  opacity: 0.9;
+}
+
+.dark .furigana-always rt {
+  opacity: 0.85;
+}
+
+
 

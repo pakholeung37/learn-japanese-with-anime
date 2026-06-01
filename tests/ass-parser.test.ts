@@ -155,17 +155,17 @@ describe("ASS Parser", () => {
       })
     })
 
-    it("should have reasonable dialogue distribution", () => {
+    it("should have reasonable dialogue distribution and filter out OP/ED lyrics", () => {
       const result = parseASS(assContent)
 
-      // 验证有普通对话和OP/ED歌词
+      // 验证有普通对话，且OP/ED歌词被过滤
       const regularDialogues = result.dialogues.filter(
         (d) => d.style === "zhengwen",
       )
       const opDialogues = result.dialogues.filter((d) => d.style === "OPJ")
 
       expect(regularDialogues.length).toBeGreaterThan(0)
-      expect(opDialogues.length).toBeGreaterThan(0)
+      expect(opDialogues.length).toBe(0)
     })
   })
 })

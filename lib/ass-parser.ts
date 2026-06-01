@@ -1,3 +1,5 @@
+import { FuriganaToken } from "./furigana"
+
 export interface SubtitleLine {
   id: string
   startTime: string
@@ -5,6 +7,7 @@ export interface SubtitleLine {
   text: string
   style: string
   actor: string
+  furigana?: FuriganaToken[]
 }
 
 export interface ParsedSubtitle {
