@@ -58,7 +58,7 @@ export default function EpisodePage({
     }
   }
 
-  const { setHeaderContent } = useHeader()
+  const { setHeaderContent, setHeaderClass } = useHeader()
   const focusContainerRef = useRef<HTMLDivElement>(null)
   const initialLoadedRef = useRef(false)
   const consecutiveKeyCountRef = useRef(0)
@@ -96,11 +96,26 @@ export default function EpisodePage({
     }
   }, [viewMode, loading, error])
 
+  // 根据视口模式动态调整 Header 样式（沉浸模式下弱化/悬浮显现）
+  useEffect(() => {
+    if (viewMode === "focus" && !loading && !error) {
+      setHeaderClass("zen-header")
+    } else {
+      setHeaderClass("")
+    }
+    return () => {
+      setHeaderClass("")
+    }
+  }, [viewMode, loading, error, setHeaderClass])
+
   // 全局键盘和按键松开监听 (沉浸聚焦模式下，支持长按方向键加速滚动)
   useEffect(() => {
     if (viewMode !== "focus" || loading || error || !data) return
 
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // 如果处于输入法输入状态，跳过处理，避免干扰日语输入法选词与回车确认
+      if (e.isComposing || e.keyCode === 229) return
+
       // 排除快捷键 Ctrl/Cmd 组合键，避免干扰
       if (e.ctrlKey || e.metaKey) return
 
@@ -146,6 +161,9 @@ export default function EpisodePage({
     }
 
     const handleGlobalKeyUp = (e: KeyboardEvent) => {
+      // 如果处于输入法输入状态，跳过处理
+      if (e.isComposing || e.keyCode === 229) return
+
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         consecutiveKeyCountRef.current = 0 // 按键松开时重置计数器
       }
@@ -248,112 +266,51 @@ export default function EpisodePage({
     }
 
     const stats = getStats()
-    const progress =
-      stats.total > 0
-        ? ((stats.completed / stats.total) * 100).toFixed(1)
-        : "0"
 
     setHeaderContent(
-      <div className="flex items-center justify-between flex-1 min-w-0 mr-3">
-        {/* 左侧信息 */}
+      <div className="flex items-center justify-between flex-1 min-w-0 mr-3 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+        {/* 左侧：返回与轻量级标题及计数 */}
         <div className="flex items-center space-x-4">
           <Link
             href="/"
-            className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+            className="flex items-center hover:text-gray-900 dark:hover:text-gray-100 transition-colors font-medium"
           >
-            <ArrowLeft className="w-5 h-5 mr-1" />
+            <ArrowLeft className="w-4 h-4 mr-1.5" />
             返回
           </Link>
-          <div className="flex gap-4 items-center">
-            <h2 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 dark:text-white max-w-[140px] sm:max-w-xs md:max-w-none truncate">
-              {data?.animeTitle || propAnimeTitle} - 第
-              {data?.episodeNumber || propEpisodeNumber}集
-              {data?.episodeTitle && ` - ${data.episodeTitle}`}
-            </h2>
-            
-            {/* 精美进度展示 */}
-            <div className="hidden md:flex items-center gap-2">
-              <span className="text-xs bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full font-semibold">
-                进度 {stats.completed}/{stats.total}
-              </span>
-              <div className="w-24 bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden">
-                <div
-                  className="bg-gradient-to-r from-indigo-500 to-cyan-500 h-full rounded-full transition-all duration-500"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-                {progress}%
-              </span>
-            </div>
-          </div>
+          <div className="h-3 w-px bg-gray-200 dark:bg-gray-800" />
+          <span className="text-gray-800 dark:text-gray-200 truncate max-w-[180px] sm:max-w-sm font-medium">
+            {data?.animeTitle || propAnimeTitle} · 第 {data?.episodeNumber || propEpisodeNumber} 集
+          </span>
+          <span className="text-gray-400 dark:text-gray-600 font-mono text-[11px]">
+            ({stats.completed}/{stats.total})
+          </span>
         </div>
 
-        {/* 右侧：注音设置与模式选择按钮 */}
-        <div className="flex items-center gap-3">
-          {/* 振假名注音设置 */}
-          <div className="flex items-center bg-gray-155 dark:bg-gray-800/80 p-0.5 rounded-lg border border-gray-200/50 dark:border-gray-750 shadow-inner h-9">
-            <span className="px-2 text-[10px] font-bold text-gray-400 dark:text-gray-500 select-none border-r border-gray-200 dark:border-gray-700/50 mr-0.5">
-              注音
-            </span>
-            <button
-              onClick={() => handleFuriganaModeChange("always")}
-              className={`flex items-center justify-center px-2.5 h-full rounded-md text-[10px] sm:text-xs font-semibold transition-all cursor-pointer ${
-                furiganaMode === "always"
-                  ? "bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-              }`}
-              title="总是显示平假名注音"
-            >
-              常显
-            </button>
-            <button
-              onClick={() => handleFuriganaModeChange("hover")}
-              className={`flex items-center justify-center px-2.5 h-full rounded-md text-[10px] sm:text-xs font-semibold transition-all cursor-pointer ${
-                furiganaMode === "hover"
-                  ? "bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-              }`}
-              title="悬浮显注音（暗记测试）"
-            >
-              悬浮
-            </button>
-            <button
-              onClick={() => handleFuriganaModeChange("hide")}
-              className={`flex items-center justify-center px-2.5 h-full rounded-md text-[10px] sm:text-xs font-semibold transition-all cursor-pointer ${
-                furiganaMode === "hide"
-                  ? "bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-              }`}
-              title="隐藏假名注音"
-            >
-              隐藏
-            </button>
-          </div>
+        {/* 右侧：精简文本式循环切换 */}
+        <div className="flex items-center space-x-6 font-medium select-none">
+          <button
+            onClick={() => {
+              const nextMap: Record<"always" | "hover" | "hide", "always" | "hover" | "hide"> = {
+                always: "hover",
+                hover: "hide",
+                hide: "always",
+              }
+              handleFuriganaModeChange(nextMap[furiganaMode])
+            }}
+            className="hover:text-gray-900 dark:hover:text-gray-100 cursor-pointer transition-colors"
+            title="点击切换注音显示方式"
+          >
+            注音: {furiganaMode === "always" ? "常显" : furiganaMode === "hover" ? "悬浮" : "隐藏"}
+          </button>
 
-          {/* 模式选择按钮 */}
-          <div className="flex items-center bg-gray-155 dark:bg-gray-800/80 p-0.5 rounded-lg border border-gray-200/50 dark:border-gray-750 shadow-inner h-9">
-            <button
-              onClick={() => setViewMode("focus")}
-              className={`flex items-center justify-center px-3 h-full rounded-md text-[10px] sm:text-xs font-semibold transition-all cursor-pointer ${
-                viewMode === "focus"
-                  ? "bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-              }`}
-            >
-              沉浸聚焦
-            </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={`flex items-center justify-center px-3 h-full rounded-md text-[10px] sm:text-xs font-semibold transition-all cursor-pointer ${
-                viewMode === "list"
-                  ? "bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-              }`}
-            >
-              经典列表
-            </button>
-          </div>
+          <button
+            onClick={() => setViewMode(viewMode === "focus" ? "list" : "focus")}
+            className="hover:text-gray-900 dark:hover:text-gray-100 cursor-pointer transition-colors"
+            title="点击切换视图模式"
+          >
+            模式: {viewMode === "focus" ? "聚焦" : "列表"}
+          </button>
         </div>
       </div>,
     )

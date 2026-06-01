@@ -198,7 +198,7 @@ export default function SubtitleRow({
             {subtitle.text}
           </div>
           {translatedText && (
-            <div className="text-xs text-gray-400 dark:text-gray-500 line-clamp-1 truncate max-w-lg">
+            <div className="text-xs text-indigo-500/60 dark:text-indigo-300/60 line-clamp-1 truncate max-w-lg translation-input">
               {translatedText}
             </div>
           )}
@@ -233,7 +233,7 @@ export default function SubtitleRow({
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
             rows={1}
-            className="w-full bg-transparent text-xl md:text-2xl text-center text-gray-900 dark:text-white focus:outline-none resize-none placeholder-gray-300 dark:placeholder-gray-700 leading-relaxed font-sans min-h-[56px] overflow-hidden"
+            className="w-full bg-transparent text-xl md:text-2xl text-center text-indigo-500 dark:text-indigo-300 focus:outline-none resize-none placeholder-gray-300 dark:placeholder-gray-700 leading-relaxed translation-input min-h-[56px] overflow-hidden"
           />
         </div>
       </div>
@@ -297,10 +297,10 @@ export default function SubtitleRow({
           onKeyDown={handleKeyDown}
           placeholder="输入您的翻译..."
           rows={1}
-          className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none placeholder-gray-400 dark:placeholder-gray-500 transition-all overflow-hidden ${
+          className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none placeholder-gray-400 dark:placeholder-gray-500 transition-all overflow-hidden text-indigo-500 dark:text-indigo-300 font-medium translation-input ${
             translatedText
-              ? "bg-emerald-50/30 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/80 text-gray-900 dark:text-white"
-              : "bg-gray-50 dark:bg-gray-900/40 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white"
+              ? "bg-emerald-50/30 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/80"
+              : "bg-gray-50 dark:bg-gray-900/40 border-gray-300 dark:border-gray-700"
           }`}
         />
       </div>

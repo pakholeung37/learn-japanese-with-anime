@@ -181,5 +181,35 @@ ruby:hover rt {
   opacity: 0.85;
 }
 
+/* 翻译输入框专用字体 - 打字机般的等宽质感 */
+.translation-input {
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  letter-spacing: -0.01em;
+}
+
+/* Zen Header 样式 - 用于沉浸式聚焦模式 */
+.zen-header {
+  border-bottom-color: transparent !important;
+  background-color: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+.zen-header .header-controls {
+  opacity: 0.22;
+  transform: translateY(-2px);
+  transition: 
+    opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), 
+    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.zen-header:hover .header-controls {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+
+
 
 
