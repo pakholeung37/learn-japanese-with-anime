@@ -1,7 +1,6 @@
 import type { Metadata } from "next"
 import { Geist, Geist_Mono, Noto_Serif_JP } from "next/font/google"
 import "./globals.css"
-import DevTools from "@/components/DevTools"
 import { ThemeProvider } from "@/components/ThemeProvider"
 import { HeaderProvider } from "@/components/HeaderProvider"
 import DynamicHeader from "@/components/DynamicHeader"
@@ -45,8 +44,6 @@ export default function RootLayout({
 
               {/* 主要内容 */}
               <main className="max-w-6xl mx-auto px-4 py-6">{children}</main>
-
-              <DevTools />
             </div>
           </HeaderProvider>
         </ThemeProvider>

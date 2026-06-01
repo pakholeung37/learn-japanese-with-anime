@@ -7,6 +7,12 @@ import {
 
 // 动态导入存储服务
 async function getKVClient() {
+  // 检查是否在测试环境，测试环境使用内存存储以隔离测试数据并提升速度
+  if (process.env.NODE_ENV === "test" || process.env.VITEST) {
+    const { mockKV } = await import("./memory-store")
+    return mockKV
+  }
+
   // 检查是否在生产环境且有KV配置
   const isProduction =
     process.env.MODE === "production" || process.env.NODE_ENV === "production"
@@ -18,9 +24,9 @@ async function getKVClient() {
     const { kv } = await import("@vercel/kv")
     return kv
   } else {
-    // 开发环境使用内存存储
-    const { mockKV } = await import("./memory-store")
-    return mockKV
+    // 开发环境和无KV配置的生产环境，默认使用本地文件存储 (data/db.json)
+    const { fileKV } = await import("./file-store")
+    return fileKV
   }
 }
 

@@ -10,14 +10,14 @@ export async function GET() {
       )
     }
 
-    const { default: memoryStore } = await import("@/lib/memory-store")
-    const stats = memoryStore.getStats()
+    const { default: fileStore } = await import("@/lib/file-store")
+    const stats = await fileStore.getStats()
 
     return NextResponse.json({
       environment: "development",
-      storage: "memory",
+      storage: "file",
       stats,
-      note: "数据存储在内存中，重启服务后会丢失",
+      note: "数据存储在本地 data/db.json 中，持久化保存",
     })
   } catch (error) {
     console.error("获取开发信息失败:", error)
@@ -35,11 +35,11 @@ export async function DELETE() {
       )
     }
 
-    const { default: memoryStore } = await import("@/lib/memory-store")
-    memoryStore.clear()
+    const { default: fileStore } = await import("@/lib/file-store")
+    await fileStore.clear()
 
     return NextResponse.json({
-      message: "内存数据已清空",
+      message: "本地文件数据库已清空",
       timestamp: new Date().toISOString(),
     })
   } catch (error) {
