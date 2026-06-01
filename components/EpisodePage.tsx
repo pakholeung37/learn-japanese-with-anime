@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { SubtitleLine } from "@/lib/ass-parser"
 import { Translation } from "@/types/anime"
 import SubtitleRow from "@/components/SubtitleRow"
-import { ArrowLeft, Play, Pause, RotateCcw } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useHeader } from "./HeaderProvider"
 
@@ -32,16 +32,163 @@ export default function EpisodePage({
   const [data, setData] = useState<EpisodeData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [filter, setFilter] = useState<"all" | "completed" | "incomplete">(
-    "all",
-  )
-  const [currentPosition, setCurrentPosition] = useState(0)
-  const { setHeaderContent } = useHeader()
+  
+  // 双模状态
+  const [viewMode, setViewMode] = useState<"focus" | "list">("focus")
+  const [activeIndex, setActiveIndex] = useState(0)
 
+  const { setHeaderContent } = useHeader()
+  const focusContainerRef = useRef<HTMLDivElement>(null)
+  const initialLoadedRef = useRef(false)
+  const consecutiveKeyCountRef = useRef(0)
+
+  // 获取数据
   useEffect(() => {
     fetchEpisodeData()
   }, [episodeId])
 
+  // 定位首个未翻译字幕
+  useEffect(() => {
+    if (data && !initialLoadedRef.current) {
+      initialLoadedRef.current = true
+      const translationMap = new Map(
+        data.translations.map((t) => [t.subtitleId, t]),
+      )
+      const firstIncompleteIdx = data.subtitles.findIndex(
+        (s) => !translationMap.has(s.id),
+      )
+      if (firstIncompleteIdx !== -1) {
+        setActiveIndex(firstIncompleteIdx)
+      }
+    }
+  }, [data])
+
+  // 锁定 body 滚动 (沉浸模式下)
+  useEffect(() => {
+    if (viewMode === "focus" && !loading && !error) {
+      document.body.style.overflow = "hidden"
+    } else {
+      document.body.style.overflow = ""
+    }
+    return () => {
+      document.body.style.overflow = ""
+    }
+  }, [viewMode, loading, error])
+
+  // 全局键盘和按键松开监听 (沉浸聚焦模式下，支持长按方向键加速滚动)
+  useEffect(() => {
+    if (viewMode !== "focus" || loading || error || !data) return
+
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // 排除快捷键 Ctrl/Cmd 组合键，避免干扰
+      if (e.ctrlKey || e.metaKey) return
+
+      const subtitles = data.subtitles || []
+      if (subtitles.length === 0) return
+
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault()
+
+        // 持续按下方向键时，consecutiveKeyCountRef 会累加，提供加速步长
+        if (e.repeat) {
+          consecutiveKeyCountRef.current = Math.min(15, consecutiveKeyCountRef.current + 1)
+        } else {
+          consecutiveKeyCountRef.current = 1
+        }
+
+        // 步长根据持续按键次数增加，最多一次跨越 3 句
+        const step = Math.min(3, Math.max(1, Math.floor(consecutiveKeyCountRef.current / 5)))
+
+        if (e.key === "ArrowDown") {
+          setActiveIndex((prev) => Math.min(subtitles.length - 1, prev + step))
+        } else {
+          setActiveIndex((prev) => Math.max(0, prev - step))
+        }
+      } else if (e.key === "Enter") {
+        // 回车保存当前行并前往下一句
+        if (!e.shiftKey) {
+          e.preventDefault()
+
+          // 自动触发现有聚焦元素的失焦保存
+          if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur()
+          }
+
+          setActiveIndex((prev) => {
+            if (prev < subtitles.length - 1) {
+              return prev + 1
+            }
+            return prev
+          })
+        }
+      }
+    }
+
+    const handleGlobalKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        consecutiveKeyCountRef.current = 0 // 按键松开时重置计数器
+      }
+    }
+
+    window.addEventListener("keydown", handleGlobalKeyDown)
+    window.addEventListener("keyup", handleGlobalKeyUp)
+    return () => {
+      window.removeEventListener("keydown", handleGlobalKeyDown)
+      window.removeEventListener("keyup", handleGlobalKeyUp)
+    }
+  }, [viewMode, loading, error, data])
+
+  // 将鼠标滚轮/触控板滚动转换为切句行为，并带滚动加速度支持
+  useEffect(() => {
+    const container = focusContainerRef.current
+    if (!container || viewMode !== "focus" || loading || error || !data) return
+
+    const lastWheelTimeRef = { current: 0 }
+    const consecutiveScrollCountRef = { current: 0 }
+
+    const handleWheelEvent = (e: WheelEvent) => {
+      e.preventDefault()
+
+      const now = Date.now()
+      const timeDiff = now - lastWheelTimeRef.current
+
+      // 如果两次滚动间隔小于 250ms，视为连续快速滚动，累加计数器
+      if (timeDiff < 250) {
+        consecutiveScrollCountRef.current = Math.min(12, consecutiveScrollCountRef.current + 1)
+      } else {
+        consecutiveScrollCountRef.current = 0
+      }
+
+      // 动态降低冷却时间，连续高速滚动时最小响应时间下降到 45ms，极速响应
+      const cooldown = Math.max(45, 220 - consecutiveScrollCountRef.current * 18)
+
+      if (timeDiff < cooldown) {
+        return
+      }
+
+      const subtitles = data.subtitles || []
+      if (subtitles.length === 0) return
+
+      // 根据快速滚动的强度 (deltaY 绝对值) 和连续滚动计数动态放大跳句步长，最大支持一次跳 3 句
+      const absDelta = Math.abs(e.deltaY)
+      const step = Math.min(3, Math.max(1, Math.floor(absDelta / 45)))
+
+      lastWheelTimeRef.current = now
+
+      if (e.deltaY > 5) {
+        setActiveIndex((prev) => Math.min(subtitles.length - 1, prev + step))
+      } else if (e.deltaY < -5) {
+        setActiveIndex((prev) => Math.max(0, prev - step))
+      }
+    }
+
+    container.addEventListener("wheel", handleWheelEvent, { passive: false })
+    return () => {
+      container.removeEventListener("wheel", handleWheelEvent)
+    }
+  }, [viewMode, loading, error, data])
+
+  // 更新 Header 动态内容
   useEffect(() => {
     if (loading) {
       setHeaderContent(
@@ -81,10 +228,13 @@ export default function EpisodePage({
 
     const stats = getStats()
     const progress =
-      stats.total > 0 ? ((stats.completed / stats.total) * 100).toFixed(1) : "0"
+      stats.total > 0
+        ? ((stats.completed / stats.total) * 100).toFixed(1)
+        : "0"
 
     setHeaderContent(
-      <div className="flex items-center justify-between w-full">
+      <div className="flex items-center justify-between flex-1 min-w-0 mr-3">
+        {/* 左侧信息 */}
         <div className="flex items-center space-x-4">
           <Link
             href="/"
@@ -93,34 +243,57 @@ export default function EpisodePage({
             <ArrowLeft className="w-5 h-5 mr-1" />
             返回
           </Link>
-          <div className="flex gap-2 items-center">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <div className="flex gap-4 items-center">
+            <h2 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 dark:text-white max-w-[140px] sm:max-w-xs md:max-w-none truncate">
               {data?.animeTitle || propAnimeTitle} - 第
               {data?.episodeNumber || propEpisodeNumber}集
               {data?.episodeTitle && ` - ${data.episodeTitle}`}
             </h2>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              进度：{stats.completed}/{stats.total} ({progress}%)
+            
+            {/* 精美进度展示 */}
+            <div className="hidden md:flex items-center gap-2">
+              <span className="text-xs bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full font-semibold">
+                进度 {stats.completed}/{stats.total}
+              </span>
+              <div className="w-24 bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-indigo-500 to-cyan-500 h-full rounded-full transition-all duration-500"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                {progress}%
+              </span>
             </div>
           </div>
         </div>
 
-        {/* 进度条 */}
-        {/* <div>
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">翻译进度</div>
-          <div className="w-32">
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-              <div
-                className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${progress}%` }}
-              ></div>
-            </div>
-          </div>
-        </div> */}
+        {/* 右侧：模式选择按钮 */}
+        <div className="flex items-center bg-gray-150 dark:bg-gray-800/80 p-0.5 rounded-lg border border-gray-200/50 dark:border-gray-750 shadow-inner h-9">
+          <button
+            onClick={() => setViewMode("focus")}
+            className={`flex items-center justify-center px-3 h-full rounded-md text-xs font-semibold transition-all cursor-pointer ${
+              viewMode === "focus"
+                ? "bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+            }`}
+          >
+            沉浸聚焦
+          </button>
+          <button
+            onClick={() => setViewMode("list")}
+            className={`flex items-center justify-center px-3 h-full rounded-md text-xs font-semibold transition-all cursor-pointer ${
+              viewMode === "list"
+                ? "bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+            }`}
+          >
+            经典列表
+          </button>
+        </div>
       </div>,
     )
 
-    // 清理函数，在组件卸载时重置 header
     return () => {
       setHeaderContent(null)
     }
@@ -131,6 +304,7 @@ export default function EpisodePage({
     setHeaderContent,
     propAnimeTitle,
     propEpisodeNumber,
+    viewMode,
   ])
 
   const fetchEpisodeData = async () => {
@@ -178,7 +352,6 @@ export default function EpisodePage({
 
       const result = await response.json()
 
-      // 更新本地状态
       setData((prev) => {
         if (!prev) return prev
 
@@ -221,7 +394,6 @@ export default function EpisodePage({
         throw new Error("删除翻译失败")
       }
 
-      // 更新本地状态
       setData((prev) => {
         if (!prev) return prev
 
@@ -238,22 +410,6 @@ export default function EpisodePage({
     }
   }
 
-  const getFilteredSubtitles = () => {
-    if (!data) return []
-
-    const { subtitles, translations } = data
-    const translationMap = new Map(translations.map((t) => [t.subtitleId, t]))
-
-    switch (filter) {
-      case "completed":
-        return subtitles.filter((s) => translationMap.has(s.id))
-      case "incomplete":
-        return subtitles.filter((s) => !translationMap.has(s.id))
-      default:
-        return subtitles
-    }
-  }
-
   const getStats = () => {
     if (!data) return { total: 0, completed: 0 }
 
@@ -263,11 +419,39 @@ export default function EpisodePage({
     return { total, completed }
   }
 
+  // 获取要渲染的 5 个槽位（当前行 + 上下各 2 行，不足的用空占位符补齐，保证活动行位置绝对锁定在中央）
+  const getFocusSlice = () => {
+    const subtitles = data?.subtitles || []
+    if (subtitles.length === 0) return []
+
+    const slice = []
+    for (let offset = -2; offset <= 2; offset++) {
+      const targetIdx = activeIndex + offset
+      if (targetIdx >= 0 && targetIdx < subtitles.length) {
+        slice.push({
+          subtitle: subtitles[targetIdx],
+          idx: targetIdx,
+          isEmpty: false,
+        })
+      } else {
+        slice.push({
+          subtitle: null,
+          idx: targetIdx,
+          isEmpty: true,
+        })
+      }
+    }
+    return slice
+  }
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg text-gray-600 dark:text-gray-400">
-          加载中...
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full" />
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            正在载入剧集字幕...
+          </div>
         </div>
       </div>
     )
@@ -275,14 +459,14 @@ export default function EpisodePage({
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="text-lg text-red-600 dark:text-red-400 mb-4">
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center p-8 glass-panel rounded-2xl max-w-md border border-gray-200 dark:border-gray-800">
+          <div className="text-lg text-rose-600 dark:text-rose-400 mb-4 font-semibold">
             {error}
           </div>
           <button
             onClick={fetchEpisodeData}
-            className="px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-600"
+            className="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/20 text-sm font-medium"
           >
             重试
           </button>
@@ -291,58 +475,85 @@ export default function EpisodePage({
     )
   }
 
-  const filteredSubtitles = getFilteredSubtitles()
+  const subtitles = data?.subtitles || []
   const stats = getStats()
-  const progress =
-    stats.total > 0 ? ((stats.completed / stats.total) * 100).toFixed(1) : "0"
+
   return (
     <div className="min-h-screen">
-      {/* 过滤器 */}
-      <div className="mb-4">
-        <div className="flex space-x-2">
-          {[
-            { key: "all", label: `全部 (${stats.total})` },
-            { key: "completed", label: `已翻译 (${stats.completed})` },
-            {
-              key: "incomplete",
-              label: `未翻译 (${stats.total - stats.completed})`,
-            },
-          ].map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setFilter(key as any)}
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                filter === key
-                  ? "bg-blue-600 dark:bg-blue-700 text-white"
-                  : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* 字幕列表区 */}
+      <div className="pb-32">
+        {subtitles.length === 0 ? (
+          <div className="text-center py-16 bg-gray-50 dark:bg-gray-800/10 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800">
+            <div className="text-sm text-gray-400 dark:text-gray-500 mb-1">
+              没有找到字幕行
+            </div>
+          </div>
+        ) : viewMode === "focus" ? (
+          // 沉浸聚焦容器 - 静态定高，无真正滚动条，全部拦截通过 wheel 转换
+          <div 
+            ref={focusContainerRef}
+            className="max-w-4xl mx-auto flex flex-col justify-center h-[calc(100vh-140px)] overflow-hidden timeline-mask"
+          >
+            <div className="space-y-6">
+              {getFocusSlice().map(({ subtitle, idx, isEmpty }) => {
+                if (isEmpty) {
+                  // 空白占位符：采用与非活动字幕行相同的样式结构以保证高度一致，保证 Slot 3 完美锁定中央
+                  return (
+                    <div key={`empty-${idx}`} className="py-4 px-6 opacity-0 select-none pointer-events-none">
+                      <div className="flex flex-col items-center justify-center text-center gap-1">
+                        <div className="japanese-text text-xl">&nbsp;</div>
+                        <div className="text-xs">&nbsp;</div>
+                      </div>
+                    </div>
+                  )
+                }
 
-      {/* 字幕列表 */}
-      <div className="pb-8">
-        {filteredSubtitles.length === 0 ? (
-          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-            没有找到字幕数据
+                const isActive = idx === activeIndex
+                const translation = data?.translations.find(
+                  (t) => t.subtitleId === subtitle!.id,
+                )
+
+                return (
+                  <div
+                    key={subtitle!.id + "-" + idx}
+                    className="transition-all duration-500 ease-in-out"
+                  >
+                    <SubtitleRow
+                      subtitle={subtitle!}
+                      translation={translation}
+                      episodeId={episodeId}
+                      onSave={handleSaveTranslation}
+                      onDelete={handleDeleteTranslation}
+                      viewMode="focus"
+                      isActive={isActive}
+                      onFocusSelf={() => setActiveIndex(idx)}
+                    />
+                  </div>
+                )
+              })}
+            </div>
           </div>
         ) : (
-          <div className="space-y-1">
-            {filteredSubtitles.map((subtitle, i) => {
+          // 经典列表容器
+          <div className="space-y-4 max-w-4xl mx-auto">
+            {subtitles.map((subtitle, idx) => {
               const translation = data?.translations.find(
                 (t) => t.subtitleId === subtitle.id,
               )
               return (
                 <SubtitleRow
-                  key={subtitle.id + '-' + i}
+                  key={subtitle.id + "-" + idx}
                   subtitle={subtitle}
                   translation={translation}
                   episodeId={episodeId}
                   onSave={handleSaveTranslation}
                   onDelete={handleDeleteTranslation}
+                  viewMode="list"
+                  onFocusSelf={() => {
+                    // 点击切换至聚焦模式
+                    setActiveIndex(idx)
+                    setViewMode("focus")
+                  }}
                 />
               )
             })}

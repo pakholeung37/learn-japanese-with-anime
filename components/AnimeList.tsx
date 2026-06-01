@@ -11,6 +11,10 @@ export default function AnimeList() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    // 强制加载主页时回到顶部，防止浏览器滚动恢复机制导致异步渲染后页面滚到底部
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0)
+    }
     fetchAnimeList()
   }, [])
 

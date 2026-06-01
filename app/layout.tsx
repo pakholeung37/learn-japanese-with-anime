@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
+import { Geist, Geist_Mono, Noto_Serif_JP } from "next/font/google"
 import "./globals.css"
 import DevTools from "@/components/DevTools"
 import { ThemeProvider } from "@/components/ThemeProvider"
@@ -16,6 +16,13 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 })
 
+const notoSerifJP = Noto_Serif_JP({
+  variable: "--font-noto-serif-jp",
+  weight: ["400", "500", "700"],
+  preload: false,
+  display: "swap",
+})
+
 export const metadata: Metadata = {
   title: "通过动画学习日语",
   description: "通过翻译动画字幕来学习日语",
@@ -29,7 +36,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${notoSerifJP.variable} antialiased`}
       >
         <ThemeProvider>
           <HeaderProvider>

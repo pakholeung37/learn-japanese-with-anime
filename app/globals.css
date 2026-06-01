@@ -39,6 +39,7 @@ body {
   transition:
     background-color 0.3s ease,
     color 0.3s ease;
+  overflow-anchor: none;
 }
 
 /* 确保深色和浅色模式的 color-scheme 正确 */
@@ -49,3 +50,81 @@ body {
 :root.light {
   color-scheme: light;
 }
+
+/* 沉浸聚焦模式特有样式 */
+.glass-panel {
+  background-color: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .glass-panel {
+  background-color: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* 日语美化字体系列 */
+.japanese-text {
+  font-family: var(--font-noto-serif-jp), "Shippori Mincho", "Sawarabi Mincho", "YuMincho", "Hiragino Mincho ProN", serif;
+  letter-spacing: 0.06em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.dark .japanese-text {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* 霓虹聚焦呼吸灯效果 */
+.focus-neon-ring {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.focus-neon-ring:focus-within {
+  border-color: transparent;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2), 0 0 20px rgba(99, 102, 241, 0.15);
+  background-image: linear-gradient(var(--background), var(--background)), 
+                    linear-gradient(135deg, #6366f1, #06b6d4);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+
+/* 渐变遮罩，使提词胶卷上下边缘虚化 */
+.timeline-mask {
+  mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+}
+
+/* 卡片入场微动画 */
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 顺滑过渡滚动 */
+.scroll-smooth-container {
+  scroll-behavior: smooth;
+}
+
+/* 隐藏滚动条 */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+
