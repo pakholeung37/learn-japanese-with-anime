@@ -348,6 +348,7 @@ export default function EpisodePage({
   const handleSaveTranslation = async (
     subtitleId: string,
     translatedText: string,
+    isStarred?: boolean,
   ) => {
     if (!data) return
 
@@ -365,6 +366,7 @@ export default function EpisodePage({
           subtitleId,
           originalText: subtitle.text,
           translatedText,
+          isStarred,
         }),
       })
 

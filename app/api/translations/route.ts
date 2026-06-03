@@ -5,9 +5,13 @@ import { Translation } from "@/types/anime"
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { episodeId, subtitleId, originalText, translatedText } = body
+    const { episodeId, subtitleId, originalText, translatedText, isStarred } = body
 
-    if (!episodeId || !subtitleId || !originalText || !translatedText) {
+    if (!episodeId || !subtitleId || !originalText) {
+      return NextResponse.json({ error: "缺少必要参数" }, { status: 400 })
+    }
+
+    if (!translatedText && !isStarred) {
       return NextResponse.json({ error: "缺少必要参数" }, { status: 400 })
     }
 
@@ -16,8 +20,9 @@ export async function POST(request: NextRequest) {
       episodeId,
       subtitleId,
       originalText,
-      translatedText,
+      translatedText: translatedText || "",
       timestamp: Date.now(),
+      isStarred: !!isStarred,
     }
 
     await saveTranslation(translation)

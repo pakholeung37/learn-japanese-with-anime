@@ -102,6 +102,26 @@ describe("KV Service with Memory Store", () => {
       expect(retrieved).toBeNull()
     })
 
+    it("should save and retrieve a translation with isStarred flag", async () => {
+      const translation: Translation = {
+        id: "test-starred",
+        episodeId: "[CASO&I.G][K-ON!!]-ep01-1920x1080",
+        subtitleId: "subtitle-starred",
+        originalText: "お姉ちゃん",
+        translatedText: "",
+        timestamp: Date.now(),
+        isStarred: true,
+      }
+
+      await saveTranslation(translation)
+      const retrieved = await getTranslation(
+        translation.episodeId,
+        translation.subtitleId,
+      )
+
+      expect(retrieved).toEqual(translation)
+    })
+
     it("should return empty array for episode with no translations", async () => {
       const translations = await getEpisodeTranslations("nonexistent-episode")
       expect(translations).toEqual([])

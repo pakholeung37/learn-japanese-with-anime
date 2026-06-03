@@ -19,6 +19,7 @@ export interface Translation {
   originalText: string
   translatedText: string
   timestamp: number
+  isStarred?: boolean
 }
 
 export interface UserProgress {

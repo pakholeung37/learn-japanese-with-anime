@@ -6,7 +6,7 @@ const DB_DIR = path.join(process.cwd(), "data")
 const DB_FILE = path.join(DB_DIR, "db.json")
 
 interface DiskDB {
-  translations?: Record<string, Record<string, string>>
+  translations?: Record<string, Record<string, string | { text: string; isStarred?: boolean; time?: number }>>
   progress?: Record<string, Record<string, { completed: string[]; pos: number; time: number }>>
 }
 
@@ -20,15 +20,28 @@ function deserialize(disk: DiskDB): Record<string, any> {
   
   if (disk.translations) {
     for (const [episodeId, subs] of Object.entries(disk.translations)) {
-      for (const [subtitleId, translatedText] of Object.entries(subs)) {
+      for (const [subtitleId, t] of Object.entries(subs)) {
         const key = `translation:${episodeId}:${subtitleId}`
-        mem[key] = {
-          id: `${episodeId}-${subtitleId}`,
-          episodeId,
-          subtitleId,
-          originalText: "", // We can look this up from the subtitle file, so we do not store it
-          translatedText,
-          timestamp: Date.now(),
+        if (typeof t === "string") {
+          mem[key] = {
+            id: `${episodeId}-${subtitleId}`,
+            episodeId,
+            subtitleId,
+            originalText: "", // We can look this up from the subtitle file, so we do not store it
+            translatedText: t,
+            timestamp: Date.now(),
+            isStarred: false,
+          }
+        } else {
+          mem[key] = {
+            id: `${episodeId}-${subtitleId}`,
+            episodeId,
+            subtitleId,
+            originalText: "",
+            translatedText: t.text || "",
+            timestamp: t.time || Date.now(),
+            isStarred: !!t.isStarred,
+          }
         }
       }
     }
@@ -66,7 +79,11 @@ function serialize(mem: Record<string, any>): DiskDB {
       const subtitleId = parts.slice(2).join(":")
       
       disk.translations![episodeId] = disk.translations![episodeId] || {}
-      disk.translations![episodeId][subtitleId] = value.translatedText
+      disk.translations![episodeId][subtitleId] = {
+        text: value.translatedText || "",
+        isStarred: !!value.isStarred,
+        time: value.timestamp || Date.now(),
+      }
     } else if (key.startsWith("progress:")) {
       const parts = key.split(":")
       const userId = parts[1]

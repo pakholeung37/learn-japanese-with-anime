@@ -3,13 +3,13 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { SubtitleLine } from "@/lib/ass-parser"
 import { Translation } from "@/types/anime"
-import { Clock, Check, AlertCircle, Edit3, Maximize2 } from "lucide-react"
+import { Clock, Check, AlertCircle, Edit3, Maximize2, Star } from "lucide-react"
 
 interface SubtitleRowProps {
   subtitle: SubtitleLine
   translation?: Translation
   episodeId: string
-  onSave: (subtitleId: string, translatedText: string) => Promise<void>
+  onSave: (subtitleId: string, translatedText: string, isStarred?: boolean) => Promise<void>
   onDelete: (subtitleId: string) => Promise<void>
   // 新增支持双模的属性
   viewMode?: "list" | "focus"
@@ -34,15 +34,20 @@ export default function SubtitleRow({
   const [translatedText, setTranslatedText] = useState(
     translation?.translatedText || "",
   )
+  const [isStarred, setIsStarred] = useState(!!translation?.isStarred)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle")
   const lastSavedValueRef = useRef<string>(translation?.translatedText || "")
+  const lastSavedStarredRef = useRef<boolean>(!!translation?.isStarred)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // 只在初始化时或翻译从外部更新时设置文本
+  // 只在初始化时或翻译从外部更新时设置文本和收藏状态
   useEffect(() => {
     const newTranslationText = translation?.translatedText || ""
+    const newStarred = !!translation?.isStarred
     setTranslatedText(newTranslationText)
+    setIsStarred(newStarred)
     lastSavedValueRef.current = newTranslationText
+    lastSavedStarredRef.current = newStarred
   }, [translation])
 
   // 自动调整 textarea 高度
@@ -81,27 +86,32 @@ export default function SubtitleRow({
   )
 
   // 保存逻辑
-  const handleSave = async () => {
+  const handleSave = async (forceStarred?: boolean) => {
     const value = translatedText.trim()
+    const currentStarred = forceStarred !== undefined ? forceStarred : isStarred
 
-    // 如果内容没有变化，不需要保存
-    if (value === lastSavedValueRef.current) {
+    // 如果内容和收藏状态都没有变化，不需要保存
+    if (value === lastSavedValueRef.current && currentStarred === lastSavedStarredRef.current) {
       return
     }
 
     setSaveStatus("saving")
 
     try {
-      // 如果内容为空且之前有翻译，删除翻译
-      if (!value && translation) {
-        await onDelete(subtitle.id)
+      // 如果内容为空且没有收藏，且之前有记录/翻译，删除记录
+      if (!value && !currentStarred) {
+        if (translation) {
+          await onDelete(subtitle.id)
+        }
         lastSavedValueRef.current = ""
+        lastSavedStarredRef.current = false
         setSaveStatus("saved")
       }
-      // 如果有内容，保存翻译
-      else if (value) {
-        await onSave(subtitle.id, value)
+      // 如果有翻译内容，或者被收藏，则保存记录
+      else if (value || currentStarred) {
+        await onSave(subtitle.id, value, currentStarred)
         lastSavedValueRef.current = value
+        lastSavedStarredRef.current = currentStarred
         setSaveStatus("saved")
       } else {
         setSaveStatus("idle")
@@ -121,6 +131,30 @@ export default function SubtitleRow({
     handleSave()
   }
 
+  const toggleStar = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation()
+      e.preventDefault()
+    }
+    const newStarred = !isStarred
+    setIsStarred(newStarred)
+    await handleSave(newStarred)
+  }
+
+  // 当从活动状态变为非活动状态时，自动保存
+  const handleSaveRef = useRef(handleSave)
+  useEffect(() => {
+    handleSaveRef.current = handleSave
+  })
+
+  const isActiveRef = useRef(isActive)
+  useEffect(() => {
+    if (viewMode === "focus" && !isActive && isActiveRef.current) {
+      handleSaveRef.current()
+    }
+    isActiveRef.current = isActive
+  }, [isActive, viewMode])
+
   // 处理键盘快捷键（保留 Ctrl+S 立即保存功能）
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -131,7 +165,7 @@ export default function SubtitleRow({
       }
       // 回车保存（在 Focus 模式下，EpisodePage 会统一监听 Enter 来切换，这里避免冲突）
     },
-    [translatedText, translation, onSave, onDelete],
+    [translatedText, isStarred, translation, onSave, onDelete],
   )
 
   const getSaveStatusIcon = useCallback(() => {
@@ -156,6 +190,34 @@ export default function SubtitleRow({
             <AlertCircle className="w-3.5 h-3.5 mr-1" />
             <span className="text-xs font-medium">保存失败</span>
           </div>
+        )
+      default:
+        return null
+    }
+  }, [saveStatus])
+
+  const getSaveStatusDot = useCallback(() => {
+    switch (saveStatus) {
+      case "saving":
+        return (
+          <span 
+            className="w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400 animate-pulse" 
+            title="保存中..." 
+          />
+        )
+      case "saved":
+        return (
+          <span 
+            className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 opacity-60" 
+            title="已保存" 
+          />
+        )
+      case "error":
+        return (
+          <span 
+            className="w-1.5 h-1.5 rounded-full bg-rose-500 dark:bg-rose-400 animate-bounce" 
+            title="保存失败" 
+          />
         )
       default:
         return null
@@ -193,9 +255,10 @@ export default function SubtitleRow({
         onClick={onFocusSelf}
         className="group relative cursor-pointer py-4 px-6 opacity-15 hover:opacity-50 transition-all duration-300 transform scale-[0.97] hover:scale-[1] select-none"
       >
-        <div className="flex flex-col items-center justify-center text-center gap-1">
-          <div className="japanese-text text-xl text-gray-500 dark:text-gray-400 line-clamp-1">
+        <div className="flex flex-col items-center justify-center text-center gap-1 relative w-full">
+          <div className="japanese-text text-xl text-gray-500 dark:text-gray-400 line-clamp-1 flex items-center gap-1.5 justify-center">
             {subtitle.text}
+            {isStarred && <Star className="w-3.5 h-3.5 fill-amber-400 stroke-amber-500 inline-block opacity-60" />}
           </div>
           {translatedText && (
             <div className="text-xs text-indigo-500/60 dark:text-indigo-300/60 line-clamp-1 truncate max-w-lg translation-input">
@@ -214,7 +277,18 @@ export default function SubtitleRow({
         {/* 右上角超微时间与状态指示器 */}
         <div className="absolute right-4 -top-2 flex items-center gap-2 text-[10px] text-gray-400/60 dark:text-gray-600/60 font-mono">
           <span>{subtitle.startTime.replace(/,\d+$/, "")}</span>
-          <div className="w-1.5 h-1.5 flex items-center">{getSaveStatusIcon()}</div>
+          {getSaveStatusDot()}
+          <button
+            onClick={toggleStar}
+            className={`transition-all duration-300 hover:scale-110 cursor-pointer ${
+              isStarred
+                ? "text-amber-500 dark:text-amber-400"
+                : "text-gray-300 dark:text-gray-700 hover:text-gray-400 dark:hover:text-gray-600"
+            }`}
+            title={isStarred ? "取消收藏" : "加入收藏"}
+          >
+            <Star className={`w-3.5 h-3.5 transition-transform ${isStarred ? "fill-amber-400 stroke-amber-500 scale-110" : "scale-100"}`} />
+          </button>
         </div>
 
         {/* 日语原文区 - 极致大号明朝体 */}
@@ -225,7 +299,7 @@ export default function SubtitleRow({
         </div>
 
         {/* 翻译输入区 - 笔记本单下划线样式 */}
-        <div className="w-full relative border-b border-gray-200 dark:border-gray-800/80 focus-within:border-indigo-500/80 dark:focus-within:border-indigo-500/60 transition-colors duration-300 py-1">
+        <div className="w-full relative border-b border-gray-200 dark:border-gray-800/80 focus-within:border-indigo-500/80 dark:focus-within:border-indigo-500/60 transition-colors duration-300 py-1 min-h-[56px] flex items-center justify-center">
           <textarea
             ref={textareaRef}
             value={translatedText}
@@ -233,7 +307,7 @@ export default function SubtitleRow({
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
             rows={1}
-            className="w-full bg-transparent text-xl md:text-2xl text-center text-indigo-500 dark:text-indigo-300 focus:outline-none resize-none placeholder-gray-300 dark:placeholder-gray-700 leading-relaxed translation-input min-h-[56px] overflow-hidden"
+            className="w-full bg-transparent text-xl md:text-2xl text-center text-indigo-500 dark:text-indigo-300 focus:outline-none resize-none placeholder-gray-300 dark:placeholder-gray-700 leading-relaxed translation-input overflow-hidden"
           />
         </div>
       </div>
@@ -243,7 +317,7 @@ export default function SubtitleRow({
   // 3. 经典列表模式
   return (
     <div
-      className={`bg-white dark:bg-gray-800 border rounded-xl p-5 mb-4 shadow-sm hover:shadow-md transition-all duration-200 group ${
+      className={`bg-white dark:bg-gray-800 border rounded-xl p-5 mb-4 shadow-sm hover:shadow-md transition-all duration-200 group relative ${
         translatedText
           ? "border-emerald-100 dark:border-emerald-950/40 bg-emerald-50/10 dark:bg-emerald-950/5"
           : "border-gray-200 dark:border-gray-700"
@@ -264,6 +338,18 @@ export default function SubtitleRow({
         </div>
         <div className="flex items-center gap-3">
           {getSaveStatusIcon()}
+          <button
+            onClick={toggleStar}
+            className={`flex items-center gap-1 px-2 py-0.5 rounded transition-all cursor-pointer text-[10px] font-semibold ${
+              isStarred
+                ? "bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/40"
+                : "bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 border border-gray-200 dark:border-gray-700"
+            }`}
+            title={isStarred ? "取消收藏" : "加入收藏"}
+          >
+            <Star className={`w-3.5 h-3.5 ${isStarred ? "fill-amber-400 stroke-amber-500" : ""}`} />
+            <span>{isStarred ? "已收藏" : "收藏"}</span>
+          </button>
           {onFocusSelf && (
             <button
               onClick={(e) => {
